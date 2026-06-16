@@ -48,3 +48,31 @@ export async function loadTokens() {
     return null;
   }
 }
+
+/**
+ * OAuth2 client עם ה-tokens השמורים. אם ה-access token פג, ספריית google
+ * מרעננת אותו אוטומטית בעזרת ה-refresh_token, ואנחנו שומרים את התוצאה חזרה.
+ */
+export async function getAuthorizedClient() {
+  const tokens = await loadTokens();
+  if (!tokens) {
+    throw new Error(
+      'אין tokens שמורים — יש להתחבר תחילה דרך /api/auth/google',
+    );
+  }
+
+  const oauth2 = getOAuth2Client();
+  oauth2.setCredentials(tokens);
+
+  oauth2.on('tokens', async (refreshed) => {
+    // ב-refresh בדרך כלל לא מגיע refresh_token חדש — נשמר את הישן
+    await saveTokens({ ...tokens, ...refreshed });
+  });
+
+  return oauth2;
+}
+
+export async function getCalendarClient() {
+  const auth = await getAuthorizedClient();
+  return google.calendar({ version: 'v3', auth });
+}
