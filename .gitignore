@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# google oauth tokens (local only)
+.google-tokens.json
+
 # debug
 dev.log
 npm-debug.log*
