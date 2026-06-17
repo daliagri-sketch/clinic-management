@@ -2,7 +2,18 @@
 
 import { useState, useTransition } from 'react';
 import type { Patient, PatientUpdate } from '@/lib/types';
-import { updatePatient } from './actions';
+import { updatePatient, createPatient, syncFromICount } from './actions';
+
+type MissingClient = { icountId: string; name: string };
+
+const EMPTY_FORM: FormState = {
+  name: '',
+  calendar_aliases: [],
+  icount_id: '',
+  default_rate: '',
+  phone: '',
+  email: '',
+};
 
 type Props = {
   patients: Patient[];
@@ -29,14 +40,54 @@ function toFormState(p: Patient): FormState {
 }
 
 export default function PatientsView({ patients }: Props) {
+  const [mode, setMode] = useState<'edit' | 'add'>('edit');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
+  // סנכרון מ-iCount
+  const [showSync, setShowSync] = useState(false);
+  const [syncState, setSyncState] = useState<
+    'idle' | 'loading' | 'done' | 'error'
+  >('idle');
+  const [syncMissing, setSyncMissing] = useState<MissingClient[]>([]);
+  const [syncTotal, setSyncTotal] = useState<number | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  function handleSync() {
+    setShowSync(true);
+    setSyncState('loading');
+    setSyncError(null);
+    startTransition(async () => {
+      const res = await syncFromICount();
+      if (res.ok) {
+        setSyncMissing(res.missing);
+        setSyncTotal(res.icountTotal);
+        setSyncState('done');
+      } else {
+        setSyncError(res.error);
+        setSyncState('error');
+      }
+    });
+  }
+
   function openPatient(p: Patient) {
+    setMode('edit');
     setSelectedId(p.id);
     setForm(toFormState(p));
+    setMessage(null);
+  }
+
+  function openAdd(prefill?: { name?: string; icount_id?: string }) {
+    setMode('add');
+    setSelectedId(null);
+    setForm({
+      ...EMPTY_FORM,
+      calendar_aliases: [],
+      name: prefill?.name ?? '',
+      icount_id: prefill?.icount_id ?? '',
+    });
     setMessage(null);
   }
 
@@ -77,7 +128,8 @@ export default function PatientsView({ patients }: Props) {
   }
 
   function handleSave() {
-    if (!selectedId || !form) return;
+    if (!form) return;
+    if (mode === 'edit' && !selectedId) return;
     setMessage(null);
 
     const rateTrimmed = form.default_rate.trim();
@@ -92,18 +144,28 @@ export default function PatientsView({ patients }: Props) {
       email: form.email.trim(),
     };
 
-    if (
-      payload.default_rate !== null &&
-      Number.isNaN(payload.default_rate)
-    ) {
+    if (mode === 'add' && payload.name === '') {
+      setMessage('שם הוא שדה חובה');
+      return;
+    }
+
+    if (payload.default_rate !== null && Number.isNaN(payload.default_rate)) {
       setMessage('תעריף ברירת המחדל חייב להיות מספר');
       return;
     }
 
     startTransition(async () => {
-      const res = await updatePatient(selectedId, payload);
+      const res =
+        mode === 'add'
+          ? await createPatient(payload)
+          : await updatePatient(selectedId!, payload);
+
       if (res.ok) {
-        setMessage('נשמר בהצלחה');
+        if (mode === 'add') {
+          closePanel(); // השורה החדשה תופיע בטבלה לאחר הרענון
+        } else {
+          setMessage('נשמר בהצלחה');
+        }
       } else {
         setMessage(`שגיאה בשמירה: ${res.error}`);
       }
@@ -112,6 +174,73 @@ export default function PatientsView({ patients }: Props) {
 
   return (
     <div className="layout">
+      <div className="toolbar">
+        <button type="button" className="primary-btn" onClick={() => openAdd()}>
+          + הוסף מטופל
+        </button>
+        <button
+          type="button"
+          className="secondary-btn"
+          onClick={handleSync}
+          disabled={isPending && syncState === 'loading'}
+        >
+          {syncState === 'loading' ? 'מסנכרן…' : 'סנכרן מ-iCount'}
+        </button>
+      </div>
+
+      {showSync && (
+        <div className="sync-panel">
+          <div className="sync-header">
+            <strong>סנכרון מ-iCount</strong>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => setShowSync(false)}
+              aria-label="סגירה"
+            >
+              ✕
+            </button>
+          </div>
+
+          {syncState === 'loading' && <p className="muted">טוען מ-iCount…</p>}
+
+          {syncState === 'error' && (
+            <p className="msg-error">שגיאה: {syncError}</p>
+          )}
+
+          {syncState === 'done' &&
+            (syncMissing.length === 0 ? (
+              <p className="muted">
+                כל הלקוחות מ-iCount כבר קיימים באפליקציה ({syncTotal} נבדקו).
+              </p>
+            ) : (
+              <>
+                <p className="muted">
+                  {syncMissing.length} לקוחות ב-iCount שאינם באפליקציה (מתוך{' '}
+                  {syncTotal}):
+                </p>
+                <ul className="sync-list">
+                  {syncMissing.map((c) => (
+                    <li key={c.icountId} className="sync-row">
+                      <span className="sync-name">{c.name || '(ללא שם)'}</span>
+                      <span className="sync-id">iCount: {c.icountId}</span>
+                      <button
+                        type="button"
+                        className="add-btn"
+                        onClick={() =>
+                          openAdd({ name: c.name, icount_id: c.icountId })
+                        }
+                      >
+                        הוסף לאפליקציה
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ))}
+        </div>
+      )}
+
       <div className="table-wrap">
         <table className="patients-table">
           <thead>
@@ -144,7 +273,7 @@ export default function PatientsView({ patients }: Props) {
           <div className="overlay" onClick={closePanel} />
           <aside className="side-card">
             <div className="side-card-header">
-              <h2>עריכת מטופל</h2>
+              <h2>{mode === 'add' ? 'הוספת מטופל' : 'עריכת מטופל'}</h2>
               <button
                 type="button"
                 className="icon-btn"
@@ -238,7 +367,13 @@ export default function PatientsView({ patients }: Props) {
                 onClick={handleSave}
                 disabled={isPending}
               >
-                {isPending ? 'שומר…' : 'שמירה'}
+                {mode === 'add'
+                  ? isPending
+                    ? 'מוסיף…'
+                    : 'הוספה'
+                  : isPending
+                    ? 'שומר…'
+                    : 'שמירה'}
               </button>
               <button
                 type="button"

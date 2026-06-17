@@ -155,6 +155,59 @@ body {
   color: var(--danger);
 }
 
+.toolbar {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.sync-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.sync-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.sync-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sync-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.sync-name {
+  font-weight: 600;
+}
+
+.sync-id {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sync-row .add-btn {
+  margin-inline-start: auto;
+}
+
 /* ---- Table ---- */
 .table-wrap {
   background: var(--card);
