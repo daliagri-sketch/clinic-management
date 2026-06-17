@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCalendarClient, CALENDAR_ACCOUNT } from '@/lib/google';
+import { CALENDAR_ACCOUNT } from '@/lib/google';
+import { getMonthRange, fetchMonthEvents } from '@/lib/calendar';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,41 +17,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const [year, m] = month.split('-').map(Number);
+  const [, m] = month.split('-').map(Number);
   if (m < 1 || m > 12) {
-    return NextResponse.json(
-      { ok: false, error: 'חודש לא תקין' },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, error: 'חודש לא תקין' }, { status: 400 });
   }
 
-  // גבולות החודש בזמן מקומי של השרת (Asia/Jerusalem במכונה זו),
-  // מומרים ל-UTC עבור ה-API. m הוא 1-based, ולכן new Date(year, m, 1)
-  // הוא היום הראשון של החודש הבא (כולל גלישה נכונה לדצמבר).
-  const start = new Date(year, m - 1, 1, 0, 0, 0, 0);
-  const end = new Date(year, m, 1, 0, 0, 0, 0);
-  const timeMin = start.toISOString();
-  const timeMax = end.toISOString();
-
   try {
-    const calendar = await getCalendarClient();
-
-    const events: unknown[] = [];
-    let pageToken: string | undefined;
-
-    do {
-      const res = await calendar.events.list({
-        calendarId: CALENDAR_ACCOUNT,
-        timeMin,
-        timeMax,
-        singleEvents: true, // הרחבת אירועים חוזרים למופעים בודדים
-        orderBy: 'startTime',
-        maxResults: 2500,
-        pageToken,
-      });
-      events.push(...(res.data.items ?? []));
-      pageToken = res.data.nextPageToken ?? undefined;
-    } while (pageToken);
+    const { timeMin, timeMax } = getMonthRange(month);
+    const events = await fetchMonthEvents(month);
 
     return NextResponse.json({
       ok: true,

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase-server';
 import type { Patient } from '@/lib/types';
 import PatientsView from './patients-view';
@@ -26,6 +27,9 @@ export default async function Home() {
       <header className="page-header">
         <h1>מטופלים</h1>
         <span className="count">{patients.length} מטופלים</span>
+        <Link href="/matching" className="nav-link">
+          התאמה חודשית →
+        </Link>
       </header>
       <PatientsView patients={patients} />
     </main>

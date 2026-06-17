@@ -53,6 +53,104 @@ body {
   font-size: 14px;
 }
 
+.nav-link {
+  margin-inline-start: auto;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.nav-link:hover {
+  text-decoration: underline;
+}
+
+/* ---- Matching screen ---- */
+.matching-table td {
+  vertical-align: top;
+}
+
+.matched {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.unmatched {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.summary-hint {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.status-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.patient-select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fff;
+  color: var(--text);
+  max-width: 200px;
+}
+
+.save-btn {
+  background: #15803d;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #166534;
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ignore-btn {
+  background: #fff;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.ignore-btn:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.msg-ok {
+  color: #15803d;
+  font-size: 12px;
+}
+
+.msg-error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
 .error {
   color: var(--danger);
 }
