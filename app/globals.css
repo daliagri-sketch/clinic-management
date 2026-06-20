@@ -69,6 +69,19 @@ body {
   vertical-align: top;
 }
 
+/* תאריך ושעה — שורה אחת, רוחב מינימלי מספיק */
+.matching-table th:nth-child(2),
+.matching-table td:nth-child(2) {
+  white-space: nowrap;
+  min-width: 104px;
+}
+
+.matching-table th:nth-child(3),
+.matching-table td:nth-child(3) {
+  white-space: nowrap;
+  min-width: 64px;
+}
+
 .cell-empty {
   color: var(--border);
 }

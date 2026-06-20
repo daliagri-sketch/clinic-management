@@ -76,6 +76,51 @@ export async function fetchICountClients(): Promise<ICountClient[]> {
   return normalizeClients(data);
 }
 
+export type ICountClientDetailed = {
+  clientId: string;
+  name: string;
+  mobile: string;
+};
+
+// מביא לקוחות עם פרטים נוספים (נייד) — detail_level=10. משמש להתאמה
+// אוטומטית במסך ההתאמה.
+export async function fetchICountClientsDetailed(): Promise<
+  ICountClientDetailed[]
+> {
+  const token = process.env.ICOUNT_TOKEN;
+  if (!token) {
+    throw new Error('חסר משתנה הסביבה ICOUNT_TOKEN');
+  }
+
+  const res = await fetch(`${ICOUNT_BASE}/client/get_list`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ cid: ICOUNT_CID, detail_level: 10 }),
+    cache: 'no-store',
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!data || data.status === false) {
+    const reason =
+      (data && (data.reason || data.error_description)) || 'שגיאה לא ידועה';
+    throw new Error(`iCount: ${reason}`);
+  }
+
+  const clientsObj =
+    data.clients && typeof data.clients === 'object'
+      ? (data.clients as Record<string, Record<string, unknown>>)
+      : {};
+
+  return Object.values(clientsObj).map((c) => ({
+    clientId: c.client_id == null ? '' : String(c.client_id).trim(),
+    name: c.client_name == null ? '' : String(c.client_name).trim(),
+    mobile: c.mobile == null ? '' : String(c.mobile).trim(),
+  }));
+}
+
 export const ICOUNT_DOC_CREATE_URL = `${ICOUNT_BASE}/doc/create`;
 
 export type InvoiceParams = {

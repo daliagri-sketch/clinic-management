@@ -3,6 +3,7 @@ import { supabaseServer } from '@/lib/supabase-server';
 import type { Patient } from '@/lib/types';
 import { fetchMonthEvents } from '@/lib/calendar';
 import { buildMatchRows } from '@/lib/matching';
+import { autoMatchFromICount } from '@/lib/auto-match';
 import MatchingView from './matching-view';
 
 export const dynamic = 'force-dynamic';
@@ -50,6 +51,11 @@ export default async function MatchingPage({
     );
   }
 
+  // התאמה אוטומטית מ-iCount לאירועים שלא זוהו — עשוי להוסיף מטופלים חדשים
+  const auto = await autoMatchFromICount(rows, patients);
+  rows = auto.rows;
+  const allPatients = [...patients, ...auto.addedPatients];
+
   // סשנים קיימים בחודש — מצורפים לשורות שכבר נשמרו
   const [y, mm] = month.split('-').map(Number);
   const startDate = `${month}-01`;
@@ -74,7 +80,7 @@ export default async function MatchingPage({
     sessionsByEvent.set(key, list);
   }
 
-  const patientById = new Map(patients.map((p) => [String(p.id), p]));
+  const patientById = new Map(allPatients.map((p) => [String(p.id), p]));
 
   rows = rows.map((r) => {
     const list = sessionsByEvent.get(`${r.eventId}|${r.date}`);
@@ -101,7 +107,7 @@ export default async function MatchingPage({
   const matchedCount = rows.filter((r) => r.patientId != null).length;
   const unmatchedCount = rows.length - matchedCount;
 
-  const patientOptions = patients.map((p) => ({
+  const patientOptions = allPatients.map((p) => ({
     id: p.id,
     name: p.name ?? '',
   }));
