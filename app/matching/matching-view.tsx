@@ -181,7 +181,8 @@ export default function MatchingView({ rows, patients }: Props) {
               session.calendarStatus === 'occurred' &&
               session.paid === 'paid' &&
               !!row.patientIcountId &&
-              !session.invoiceNumber;
+              !session.invoiceNumber &&
+              !row.existingIcountInvoice;
 
             return (
               <tr key={row.eventId}>
@@ -339,6 +340,10 @@ export default function MatchingView({ rows, patients }: Props) {
                   ) : session.invoiceNumber ? (
                     <span className="matched">
                       חשבונית {session.invoiceNumber}
+                    </span>
+                  ) : row.existingIcountInvoice ? (
+                    <span className="matched">
+                      קיימת חשבונית {row.existingIcountInvoice}
                     </span>
                   ) : canIssue ? (
                     <button

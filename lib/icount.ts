@@ -121,6 +121,60 @@ export async function fetchICountClientsDetailed(): Promise<
   }));
 }
 
+export type ICountDoc = {
+  doctype: string;
+  docnum: string;
+  dateissued: string;
+  isCancelled: boolean;
+};
+
+// כל המסמכים של לקוח (doc/search). משמש לבדיקת חשבונית קיימת לפני הנפקה.
+export async function fetchClientDocs(clientId: string): Promise<ICountDoc[]> {
+  const token = process.env.ICOUNT_TOKEN;
+  if (!token) {
+    throw new Error('חסר משתנה הסביבה ICOUNT_TOKEN');
+  }
+
+  const res = await fetch(`${ICOUNT_BASE}/doc/search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ cid: ICOUNT_CID, client_id: clientId }),
+    cache: 'no-store',
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!data || data.status === false) {
+    const reason =
+      (data && (data.reason || data.error_description)) || 'שגיאה לא ידועה';
+    throw new Error(`iCount: ${reason}`);
+  }
+
+  const list = Array.isArray(data.results_list) ? data.results_list : [];
+  return list.map((d: Record<string, unknown>) => ({
+    doctype: String(d.doctype ?? ''),
+    docnum: String(d.docnum ?? ''),
+    dateissued: String(d.dateissued ?? ''),
+    isCancelled: d.is_cancelled === 1 || d.is_cancellation === 1,
+  }));
+}
+
+// מספר חשבונית (מס/קבלה או מס) פעילה לאותו תאריך, אם קיימת.
+export function findInvoiceOnDate(
+  docs: ICountDoc[],
+  date: string,
+): string | null {
+  const hit = docs.find(
+    (d) =>
+      d.dateissued === date &&
+      !d.isCancelled &&
+      (d.doctype === 'invrec' || d.doctype === 'invoice'),
+  );
+  return hit ? hit.docnum : null;
+}
+
 export const ICOUNT_DOC_CREATE_URL = `${ICOUNT_BASE}/doc/create`;
 
 export type InvoiceParams = {

@@ -4,6 +4,7 @@ import type { Patient } from '@/lib/types';
 import { fetchMonthEvents } from '@/lib/calendar';
 import { buildMatchRows } from '@/lib/matching';
 import { autoMatchFromICount } from '@/lib/auto-match';
+import { fetchClientDocs, findInvoiceOnDate, type ICountDoc } from '@/lib/icount';
 import MatchingView from './matching-view';
 
 export const dynamic = 'force-dynamic';
@@ -103,6 +104,38 @@ export default async function MatchingPage({
       },
     };
   });
+
+  // לשורות שמועמדות להנפקה (occurred + paid + icount_id + אין invoice בסשן) —
+  // בדיקה ב-iCount אם כבר קיימת חשבונית לאותו client_id ותאריך (מניעת כפילות).
+  const docsByClient = new Map<string, ICountDoc[]>();
+  const checkedRows = [];
+  for (const r of rows) {
+    const s = r.session;
+    if (
+      s &&
+      s.calendarStatus === 'occurred' &&
+      s.paid === 'paid' &&
+      r.patientIcountId &&
+      !s.invoiceNumber
+    ) {
+      let docs = docsByClient.get(r.patientIcountId);
+      if (!docs) {
+        try {
+          docs = await fetchClientDocs(r.patientIcountId);
+        } catch {
+          docs = [];
+        }
+        docsByClient.set(r.patientIcountId, docs);
+      }
+      checkedRows.push({
+        ...r,
+        existingIcountInvoice: findInvoiceOnDate(docs, r.date),
+      });
+    } else {
+      checkedRows.push(r);
+    }
+  }
+  rows = checkedRows;
 
   const matchedCount = rows.filter((r) => r.patientId != null).length;
   const unmatchedCount = rows.length - matchedCount;

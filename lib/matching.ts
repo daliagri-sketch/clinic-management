@@ -19,6 +19,7 @@ export type MatchRow = {
   patientName: string | null;
   patientIcountId: string | null;
   session: SessionInfo | null; // מצורף בצד שרת אם כבר נשמר לסשן
+  existingIcountInvoice: string | null; // חשבונית קיימת ב-iCount לאותו לקוח+תאריך
 };
 
 // חילוץ תאריך/שעה מתוך start של אירוע Google.
@@ -102,6 +103,7 @@ export function buildMatchRows(
       patientName: match ? match.name ?? '' : null,
       patientIcountId: match ? match.icount_id ?? null : null,
       session: null,
+      existingIcountInvoice: null,
     };
   });
 }
