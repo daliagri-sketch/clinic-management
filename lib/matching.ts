@@ -1,6 +1,14 @@
 import type { Patient } from './types';
 import type { CalendarEvent } from './calendar';
 
+export type SessionInfo = {
+  id: number;
+  calendarStatus: string; // scheduled | occurred | cancelled
+  paid: string; // unpaid | paid
+  paymentMethod: string | null;
+  invoiceNumber: string | null;
+};
+
 export type MatchRow = {
   eventId: string;
   summary: string;
@@ -9,6 +17,8 @@ export type MatchRow = {
   isAllDay: boolean;
   patientId: Patient['id'] | null;
   patientName: string | null;
+  patientIcountId: string | null;
+  session: SessionInfo | null; // מצורף בצד שרת אם כבר נשמר לסשן
 };
 
 // חילוץ תאריך/שעה מתוך start של אירוע Google.
@@ -90,6 +100,8 @@ export function buildMatchRows(
       isAllDay,
       patientId: match ? match.id : null,
       patientName: match ? match.name ?? '' : null,
+      patientIcountId: match ? match.icount_id ?? null : null,
+      session: null,
     };
   });
 }

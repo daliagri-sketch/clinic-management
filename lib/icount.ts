@@ -75,3 +75,60 @@ export async function fetchICountClients(): Promise<ICountClient[]> {
 
   return normalizeClients(data);
 }
+
+export const ICOUNT_DOC_CREATE_URL = `${ICOUNT_BASE}/doc/create`;
+
+export type InvoiceParams = {
+  clientId: string;
+  sum: number;
+  description: string;
+};
+
+// גוף הבקשה ל-doc/create — מוגדר במקום אחד כדי שהתצוגה-מקדימה תהיה זהה למה שנשלח.
+export function buildInvoiceBody(params: InvoiceParams) {
+  return {
+    cid: ICOUNT_CID,
+    doctype: 'invrec', // חשבונית מס קבלה
+    client_id: params.clientId,
+    sum: params.sum,
+    description: params.description,
+  };
+}
+
+// הנפקת חשבונית מס קבלה ב-iCount (doc/create). פעולה פיננסית אמיתית — נקראת רק
+// מ-issueInvoice לאחר אימות התנאים. שמות שדה התוצאה מנורמלים בזהירות.
+export async function createICountInvoice(params: InvoiceParams): Promise<string> {
+  const token = process.env.ICOUNT_TOKEN;
+  if (!token) {
+    throw new Error('חסר משתנה הסביבה ICOUNT_TOKEN');
+  }
+
+  const res = await fetch(ICOUNT_DOC_CREATE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(buildInvoiceBody(params)),
+    cache: 'no-store',
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!data || data.status === false) {
+    const reason =
+      (data && (data.reason || data.error_description)) || 'שגיאה לא ידועה';
+    throw new Error(`iCount: ${reason}`);
+  }
+
+  const num =
+    data.docnum ??
+    data.doc_number ??
+    data.docnumber ??
+    data.invoice_number ??
+    (data.doc_info && (data.doc_info.docnum ?? data.doc_info.doc_number));
+
+  if (num == null) {
+    throw new Error('iCount: לא הוחזר מספר חשבונית');
+  }
+  return String(num);
+}
