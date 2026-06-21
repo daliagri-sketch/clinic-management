@@ -9,7 +9,26 @@ import MatchingView from './matching-view';
 
 export const dynamic = 'force-dynamic';
 
-const DEFAULT_MONTH = '2026-05';
+const HEBREW_MONTHS = [
+  'ינואר',
+  'פברואר',
+  'מרץ',
+  'אפריל',
+  'מאי',
+  'יוני',
+  'יולי',
+  'אוגוסט',
+  'ספטמבר',
+  'אוקטובר',
+  'נובמבר',
+  'דצמבר',
+];
+
+function shiftMonth(month: string, delta: number): string {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
 
 export default async function MatchingPage({
   searchParams,
@@ -17,8 +36,10 @@ export default async function MatchingPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   const sp = await searchParams;
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const month =
-    sp.month && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : DEFAULT_MONTH;
+    sp.month && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : currentMonth;
 
   // מטופלים (צד שרת)
   const { data: patientsData, error: patientsError } = await supabaseServer
@@ -145,18 +166,34 @@ export default async function MatchingPage({
     name: p.name ?? '',
   }));
 
+  const [yy, mmNum] = month.split('-').map(Number);
+  const monthLabel = `${HEBREW_MONTHS[mmNum - 1]} ${yy}`;
+  const prevMonth = shiftMonth(month, -1);
+  const nextMonth = shiftMonth(month, 1);
+
   return (
     <main className="page">
       <header className="page-header">
         <h1>התאמה חודשית</h1>
         <span className="count">
-          {month} · {rows.length} אירועים · {matchedCount} מזוהים ·{' '}
-          {unmatchedCount} לא זוהו
+          {rows.length} אירועים · {matchedCount} מזוהים · {unmatchedCount} לא
+          זוהו
         </span>
         <Link href="/" className="nav-link">
           ← מטופלים
         </Link>
       </header>
+
+      <nav className="month-nav">
+        <Link href={`/matching?month=${prevMonth}`} className="month-btn">
+          חודש קודם
+        </Link>
+        <span className="month-label">{monthLabel}</span>
+        <Link href={`/matching?month=${nextMonth}`} className="month-btn">
+          חודש הבא
+        </Link>
+      </nav>
+
       <MatchingView rows={rows} patients={patientOptions} />
     </main>
   );
