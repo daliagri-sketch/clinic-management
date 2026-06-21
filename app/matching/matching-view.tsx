@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from 'react';
 import type { MatchRow, SessionInfo } from '@/lib/matching';
-import { saveSession, updateSession, issueInvoice } from '../actions';
+import {
+  saveSession,
+  updateSession,
+  issueInvoice,
+  ignoreEvent,
+} from '../actions';
 
 type PatientOption = { id: string | number; name: string };
 
@@ -72,7 +77,15 @@ export default function MatchingView({ rows, patients }: Props) {
   }
 
   function handleIgnore(eventId: string) {
+    // הסתרה מיידית באופטימיות, ושמירה ל-ignored_events ברקע
     setRow(eventId, { hidden: true });
+    startTransition(async () => {
+      const res = await ignoreEvent(eventId);
+      if (!res.ok) {
+        // נכשל — מחזירים את השורה ומציגים שגיאה
+        setRow(eventId, { hidden: false, message: `שגיאה: ${res.error}` });
+      }
+    });
   }
 
   function handleSelect(eventId: string, value: string) {

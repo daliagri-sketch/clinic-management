@@ -74,6 +74,24 @@ export type SaveSessionInput = {
   date: string;
 };
 
+// סימון אירוע כ"התעלם" — נשמר ב-ignored_events כדי שלא יופיע שוב בטעינות הבאות.
+export async function ignoreEvent(eventId: string) {
+  if (!eventId) {
+    return { ok: false as const, error: 'חסר event_id' };
+  }
+
+  const { error } = await supabaseServer
+    .from('ignored_events')
+    .upsert({ event_id: eventId }, { onConflict: 'event_id' });
+
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+
+  revalidatePath('/matching');
+  return { ok: true as const };
+}
+
 // כתיבה ל-sessions — מופעלת רק בלחיצה ידנית על "שמור לסשן".
 // upsert על האילוץ הייחודי (event_id, date, patient_id) כדי שלחיצה חוזרת
 // לא תיצור כפילות.

@@ -73,6 +73,15 @@ export default async function MatchingPage({
     );
   }
 
+  // סינון אירועים שסומנו "התעלם" (נשמרים ב-ignored_events)
+  const { data: ignoredData } = await supabaseServer
+    .from('ignored_events')
+    .select('event_id');
+  const ignoredSet = new Set(
+    (ignoredData ?? []).map((e) => String(e.event_id)),
+  );
+  rows = rows.filter((r) => !ignoredSet.has(r.eventId));
+
   // התאמה אוטומטית מ-iCount לאירועים שלא זוהו — עשוי להוסיף מטופלים חדשים
   const auto = await autoMatchFromICount(rows, patients);
   rows = auto.rows;
