@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOAuth2Client, saveTokens, TOKEN_PATH } from '@/lib/google';
+import { getOAuth2Client, saveTokens } from '@/lib/google';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,8 +31,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      message: 'החיבור ל-Google Calendar הצליח. ה-tokens נשמרו מקומית.',
-      tokenFile: TOKEN_PATH,
+      message: 'החיבור ל-Google Calendar הצליח. ה-tokens נשמרו ב-Supabase.',
       scope: tokens.scope,
       hasRefreshToken: Boolean(tokens.refresh_token),
     });
