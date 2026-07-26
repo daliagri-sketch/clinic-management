@@ -202,29 +202,53 @@ export async function createICountInvoice(params: InvoiceParams): Promise<string
     throw new Error('חסר משתנה הסביבה ICOUNT_TOKEN');
   }
 
+  const requestBody = buildInvoiceBody(params);
+
   const res = await fetch(ICOUNT_DOC_CREATE_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(buildInvoiceBody(params)),
+    body: JSON.stringify(requestBody),
     cache: 'no-store',
   });
 
-  const data = await res.json().catch(() => null);
-  if (!data || data.status === false) {
+  // קוראים את הגוף כטקסט גולמי כדי שנוכל לרשום ללוג בדיוק מה iCount החזיר,
+  // גם אם זו אינה תשובת JSON תקינה. ה-token אינו נרשם ללוג.
+  const rawBody = await res.text();
+  let data: Record<string, unknown> | null = null;
+  try {
+    data = rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : null;
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok || !data || data.status === false) {
+    // לוג מפורט לאבחון create_doc_failed וכדומה — סטטוס HTTP + הגוף המלא + מה נשלח.
+    console.error('[icount] doc/create נכשל', {
+      httpStatus: res.status,
+      httpStatusText: res.statusText,
+      requestBody, // cid/client_id/sum/description — ללא סודות
+      responseBody: data ?? rawBody, // אובייקט מפוענח, או טקסט גולמי אם הפענוח נכשל
+    });
+
     const reason =
-      (data && (data.reason || data.error_description)) || 'שגיאה לא ידועה';
+      (data && ((data.reason as string) || (data.error_description as string))) ||
+      (rawBody && !data ? rawBody.slice(0, 500) : '') ||
+      `HTTP ${res.status}` ||
+      'שגיאה לא ידועה';
     throw new Error(`iCount: ${reason}`);
   }
 
+  // בשלב זה data מובטח להיות אובייקט (נבדק למעלה) — שדות התוצאה מנורמלים בזהירות.
+  const docInfo = (data.doc_info ?? null) as Record<string, unknown> | null;
   const num =
     data.docnum ??
     data.doc_number ??
     data.docnumber ??
     data.invoice_number ??
-    (data.doc_info && (data.doc_info.docnum ?? data.doc_info.doc_number));
+    (docInfo && (docInfo.docnum ?? docInfo.doc_number));
 
   if (num == null) {
     throw new Error('iCount: לא הוחזר מספר חשבונית');
