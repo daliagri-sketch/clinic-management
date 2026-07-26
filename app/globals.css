@@ -204,6 +204,23 @@ body {
   color: var(--danger);
 }
 
+.banner-warning {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.banner-warning code {
+  background: rgba(146, 64, 14, 0.12);
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 13px;
+}
+
 .toolbar {
   display: flex;
   justify-content: flex-start;
@@ -472,3 +489,144 @@ body {
 .secondary-btn:hover:not(:disabled) {
   background: var(--bg);
 }
+
+/* patient sessions link */
+.sessions-link {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 3px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.sessions-link:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* patient meta chips */
+.patient-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.meta-chip {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2px 10px;
+}
+
+/* count row */
+.count-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 0 12px;
+}
+
+/* summary cell */
+.summary-cell {
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* inactive patient chip */
+.inactive-chip {
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+
+/* active toggle in form */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.toggle-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* summary page */
+.header-links {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.summary-totals {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 4px 0 16px;
+}
+.summary-total-chip {
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.paid-chip { border-color: #22c55e; color: #16a34a; background: #f0fdf4; }
+.unpaid-chip { border-color: #f87171; color: #dc2626; background: #fef2f2; }
+
+.summary-table .patient-name-link {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+.summary-table .patient-name-link:hover { color: var(--accent); }
+
+.summary-table tr.has-debt td { background: #fff9f9; }
+
+.debt-count {
+  color: #dc2626;
+  font-weight: 600;
+}
+.amount-paid { color: #16a34a; font-weight: 500; }
+.amount-unpaid { color: #dc2626; font-weight: 500; }
+
+/* inline new patient form in matching */
+.new-patient-btn {
+  font-size: 12px;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  margin-top: 4px;
+}
+.new-patient-btn:hover { background: var(--accent); color: #fff; }
+
+.new-patient-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.icount-input { font-size: 12px; }

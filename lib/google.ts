@@ -88,10 +88,24 @@ export async function getAuthorizedClient() {
   const oauth2 = getOAuth2Client();
   oauth2.setCredentials(tokens);
 
-  oauth2.on('tokens', async (refreshed) => {
-    // ב-refresh בדרך כלל לא מגיע refresh_token חדש — נשמר את הישן
-    await saveTokens({ ...tokens, ...refreshed });
+  // כשספריית google מרעננת את ה-access token, נשמר את התוצאה חזרה ל-Supabase.
+  // ב-refresh בדרך כלל לא מגיע refresh_token חדש — לכן נשמר את הישן.
+  // עוטפים ב-catch כדי שכשל שמירה לא יהפוך ל-unhandled rejection ויפיל את הבקשה.
+  oauth2.on('tokens', (refreshed) => {
+    void saveTokens({ ...tokens, ...refreshed }).catch((err) => {
+      console.error('[google] שמירת tokens מרועננים נכשלה:', err);
+    });
   });
+
+  // אם ה-access token פג ואין refresh_token — הריענון האוטומטי ייכשל בהמשך.
+  // ניתן שגיאה ברורה כאן כדי שהמשתמש יידע שצריך להתחבר מחדש.
+  const expired =
+    typeof tokens.expiry_date === 'number' && tokens.expiry_date <= Date.now();
+  if (expired && !tokens.refresh_token) {
+    throw new Error(
+      'ה-access token פג ואין refresh_token שמור — יש להתחבר מחדש דרך /api/auth/google',
+    );
+  }
 
   return oauth2;
 }
