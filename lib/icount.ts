@@ -181,10 +181,18 @@ export type InvoiceParams = {
   clientId: string;
   sum: number;
   description: string;
+  paymentMethod?: string | null;
 };
+
+// מיפוי אמצעי התשלום של הסשן לקוד payment_type של iCount.
+// 1 = מזומן, 4 = העברה בנקאית (משמש גם ל-bit/paybox). ברירת מחדל כשחסר: 4.
+function toPaymentType(method?: string | null): number {
+  return method === 'cash' ? 1 : 4;
+}
 
 // גוף הבקשה ל-doc/create — מוגדר במקום אחד כדי שהתצוגה-מקדימה תהיה זהה למה שנשלח.
 // iCount מצפה לשורות תחת items (unitprice/quantity), לא ל-sum/description שטוחים.
+// invrec (חשבונית מס קבלה) דורש גם income_type_id ורשומת payment.
 export function buildInvoiceBody(params: InvoiceParams) {
   return {
     cid: ICOUNT_CID,
@@ -192,11 +200,22 @@ export function buildInvoiceBody(params: InvoiceParams) {
     client_id: params.clientId,
     doc_lang: 'he',
     currency_code: 'ILS',
+    income_type_id: 1, // סוג הכנסה ברירת מחדל
+    // iCount מוסיף מע"מ אוטומטית. vat_type: 0 מבטל אותו כך שסך המסמך = unitprice,
+    // אחרת payment_sum (=unitprice) לא יתאים לסך המסמך ותתקבל שגיאת "הפרש".
+    vat_type: 0,
     items: [
       {
         description: params.description,
         unitprice: params.sum,
         quantity: 1,
+      },
+    ],
+    // payment_sum חייב להיות זהה ל-unitprice בדיוק כדי למנוע שגיאת "הפרש".
+    payment: [
+      {
+        payment_type: toPaymentType(params.paymentMethod),
+        payment_sum: params.sum,
       },
     ],
   };
