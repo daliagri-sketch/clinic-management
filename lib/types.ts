@@ -6,6 +6,7 @@ export type Patient = {
   default_rate: number | null;
   phone: string | null;
   email: string | null;
+  active: boolean;
 };
 
 export type PatientUpdate = {
@@ -15,4 +16,5 @@ export type PatientUpdate = {
   default_rate: number | null;
   phone: string;
   email: string;
+  active: boolean;
 };

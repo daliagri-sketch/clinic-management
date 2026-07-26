@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import type { Patient, PatientUpdate } from '@/lib/types';
 import { updatePatient, createPatient, syncFromICount } from './actions';
 
@@ -13,6 +14,7 @@ const EMPTY_FORM: FormState = {
   default_rate: '',
   phone: '',
   email: '',
+  active: true,
 };
 
 type Props = {
@@ -26,6 +28,7 @@ type FormState = {
   default_rate: string;
   phone: string;
   email: string;
+  active: boolean;
 };
 
 function toFormState(p: Patient): FormState {
@@ -36,6 +39,7 @@ function toFormState(p: Patient): FormState {
     default_rate: p.default_rate != null ? String(p.default_rate) : '',
     phone: p.phone ?? '',
     email: p.email ?? '',
+    active: p.active ?? true,
   };
 }
 
@@ -142,6 +146,7 @@ export default function PatientsView({ patients }: Props) {
       default_rate: rateTrimmed === '' ? null : Number(rateTrimmed),
       phone: form.phone.trim(),
       email: form.email.trim(),
+      active: form.active,
     };
 
     if (mode === 'add' && payload.name === '') {
@@ -249,6 +254,8 @@ export default function PatientsView({ patients }: Props) {
               <th>מזהה iCount</th>
               <th>תעריף ברירת מחדל</th>
               <th>טלפון</th>
+              <th>סטטוס</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -262,6 +269,19 @@ export default function PatientsView({ patients }: Props) {
                 <td>{p.icount_id ?? '—'}</td>
                 <td>{p.default_rate ?? '—'}</td>
                 <td>{p.phone ?? '—'}</td>
+                <td>
+                  {p.active === false ? (
+                    <span className="inactive-chip">לא פעיל</span>
+                  ) : null}
+                </td>
+                <td onClick={(e) => e.stopPropagation()}>
+                  <Link
+                    href={`/patients/${p.id}`}
+                    className="sessions-link"
+                  >
+                    פגישות
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -356,6 +376,18 @@ export default function PatientsView({ patients }: Props) {
                 value={form.email}
                 onChange={(e) => setField('email', e.target.value)}
               />
+            </div>
+
+            <div className="field">
+              <label>סטטוס</label>
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={form.active}
+                  onChange={(e) => setField('active', e.target.checked)}
+                />
+                <span>{form.active ? 'פעיל' : 'לא פעיל'}</span>
+              </label>
             </div>
 
             {message && <p className="message">{message}</p>}

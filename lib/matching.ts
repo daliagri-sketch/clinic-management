@@ -22,6 +22,18 @@ export type MatchRow = {
   existingIcountInvoice: string | null; // חשבונית קיימת ב-iCount לאותו לקוח+תאריך
 };
 
+// אירועים שלא נכנסים לרשימת ההתאמה — זמן פרטי/לימודים/חופש.
+// השוואה לאחר trim ו-toLowerCase כדי לתפוס גם "חופש " עם רווח.
+const SKIP_SUMMARIES = [
+  'פרטי', 'זמן פרטי', 'לימודים', 'חופש', 'חופשה',
+  'ישיבה', 'busy', 'blocked', 'no work',
+];
+
+export function isPrivateEvent(summary: string): boolean {
+  const s = summary.trim().toLowerCase();
+  return SKIP_SUMMARIES.some((k) => s === k || s.startsWith(k + ' ') || s.endsWith(' ' + k));
+}
+
 // חילוץ תאריך/שעה מתוך start של אירוע Google.
 // dateTime מגיע עם offset מקומי (למשל "2026-05-01T09:00:00+03:00"),
 // ולכן מספיק לפצל את המחרוזת כדי לקבל את שעון הקיר המקומי.
@@ -36,7 +48,9 @@ function extractDateTime(start: CalendarEvent['start']) {
   return { date: datePart ?? '', time, isAllDay: false };
 }
 
-// בדיקת הכלה דו-כיוונית של טקסט מול ה-aliases של כל המטופלים.
+// בדיקת הכלה: ה-summary מכיל את ה-alias (כיוון אחד בלבד).
+// alias.includes(summary) הוסר — הוא גרם לשמות חלקיים (למשל "אדווה") להתאים
+// לאליאסים ארוכים יותר ("אדווה יוריש") שהם מטופל אחר לגמרי.
 function findByContains(text: string, patients: Patient[]): Patient | null {
   const s = text.trim();
   if (!s) return null;
@@ -44,7 +58,7 @@ function findByContains(text: string, patients: Patient[]): Patient | null {
     for (const aliasRaw of p.calendar_aliases ?? []) {
       const alias = (aliasRaw ?? '').trim();
       if (!alias) continue;
-      if (s.includes(alias) || alias.includes(s)) {
+      if (s.includes(alias)) {
         return p;
       }
     }
@@ -88,7 +102,9 @@ export function buildMatchRows(
   events: CalendarEvent[],
   patients: Patient[],
 ): MatchRow[] {
-  return events.map((ev) => {
+  return events
+    .filter((ev) => !isPrivateEvent(ev.summary ?? ''))
+    .map((ev) => {
     const summary = ev.summary ?? '';
     const { date, time, isAllDay } = extractDateTime(ev.start);
     const match = matchPatient(summary, patients);

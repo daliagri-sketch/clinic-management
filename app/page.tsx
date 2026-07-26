@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export default async function Home() {
   const { data, error } = await supabaseServer
     .from('patients')
-    .select('id, name, calendar_aliases, icount_id, default_rate, phone, email')
+    .select('id, name, calendar_aliases, icount_id, default_rate, phone, email, active')
     .order('name', { ascending: true });
 
   if (error) {

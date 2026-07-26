@@ -44,7 +44,8 @@ export default async function MatchingPage({
   // מטופלים (צד שרת)
   const { data: patientsData, error: patientsError } = await supabaseServer
     .from('patients')
-    .select('id, name, calendar_aliases, icount_id')
+    .select('id, name, calendar_aliases, icount_id, active')
+    .eq('active', true)
     .order('name', { ascending: true });
 
   if (patientsError) {
@@ -188,9 +189,10 @@ export default async function MatchingPage({
           {rows.length} אירועים · {matchedCount} מזוהים · {unmatchedCount} לא
           זוהו
         </span>
-        <Link href="/" className="nav-link">
-          ← מטופלים
-        </Link>
+        <div style={{display:'flex', gap:'16px'}}>
+          <Link href="/summary" className="nav-link">סיכום חודשי</Link>
+          <Link href="/" className="nav-link">← מטופלים</Link>
+        </div>
       </header>
 
       <nav className="month-nav">

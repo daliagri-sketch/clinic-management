@@ -230,21 +230,26 @@ export async function issueInvoice(sessionId: number) {
 }
 
 export async function createPatient(data: PatientUpdate) {
-  const { error } = await supabaseServer.from('patients').insert({
-    name: data.name,
-    calendar_aliases: data.calendar_aliases,
-    icount_id: data.icount_id,
-    default_rate: data.default_rate,
-    phone: data.phone,
-    email: data.email,
-  });
+  const { data: inserted, error } = await supabaseServer
+    .from('patients')
+    .insert({
+      name: data.name,
+      calendar_aliases: data.calendar_aliases,
+      icount_id: data.icount_id || null,
+      default_rate: data.default_rate,
+      phone: data.phone || null,
+      email: data.email || null,
+      active: data.active,
+    })
+    .select('id, name')
+    .single();
 
   if (error) {
     return { ok: false as const, error: error.message };
   }
 
   revalidatePath('/');
-  return { ok: true as const };
+  return { ok: true as const, patient: inserted as { id: string; name: string | null } };
 }
 
 export async function updatePatient(id: string, data: PatientUpdate) {
@@ -257,6 +262,7 @@ export async function updatePatient(id: string, data: PatientUpdate) {
       default_rate: data.default_rate,
       phone: data.phone,
       email: data.email,
+      active: data.active,
     })
     .eq('id', id);
 

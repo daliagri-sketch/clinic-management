@@ -7,6 +7,7 @@ import {
   updateSession,
   issueInvoice,
   ignoreEvent,
+  createPatient,
 } from '../actions';
 
 type PatientOption = { id: string | number; name: string };
@@ -18,6 +19,8 @@ type Props = {
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
+type NewPatientForm = { name: string; icountId: string; saving: boolean; error: string | null };
+
 type RowState = {
   selectedPatientId: string | number | null;
   saveState: SaveState;
@@ -27,6 +30,8 @@ type RowState = {
   sessionSaving: boolean;
   issuing: boolean;
   invoiceMsg: string | null;
+  overriding: boolean; // האם נפתח ה-dropdown לשינוי התאמה אוטומטית
+  newPatientForm: NewPatientForm | null; // null = סגור
 };
 
 const SESSION_STATUS_OPTIONS = [
@@ -49,6 +54,10 @@ const PAYMENT_METHODS = [
 
 export default function MatchingView({ rows, patients }: Props) {
   const [isPending, startTransition] = useTransition();
+  // מטופלים שנוצרו ידנית מתוך המסך הזה (מצורפים לרשימת ה-dropdown)
+  const [extraPatients, setExtraPatients] = useState<PatientOption[]>([]);
+  const allPatients = [...patients, ...extraPatients];
+
   const [state, setState] = useState<Record<string, RowState>>(() => {
     const initial: Record<string, RowState> = {};
     for (const r of rows) {
@@ -61,6 +70,8 @@ export default function MatchingView({ rows, patients }: Props) {
         sessionSaving: false,
         issuing: false,
         invoiceMsg: null,
+        overriding: false,
+        newPatientForm: null,
       };
     }
     return initial;
@@ -68,12 +79,58 @@ export default function MatchingView({ rows, patients }: Props) {
 
   function patientName(id: string | number | null): string {
     if (id == null) return '';
-    const found = patients.find((p) => String(p.id) === String(id));
+    const found = allPatients.find((p) => String(p.id) === String(id));
     return found?.name ?? '';
   }
 
   function setRow(eventId: string, patch: Partial<RowState>) {
     setState((prev) => ({ ...prev, [eventId]: { ...prev[eventId], ...patch } }));
+  }
+
+  function openNewPatientForm(eventId: string, summary: string) {
+    setRow(eventId, {
+      newPatientForm: {
+        name: summary.trim(),
+        icountId: '',
+        saving: false,
+        error: null,
+      },
+    });
+  }
+
+  function handleCreatePatient(eventId: string) {
+    const rs = state[eventId];
+    const form = rs?.newPatientForm;
+    if (!form || !form.name.trim()) return;
+
+    setRow(eventId, { newPatientForm: { ...form, saving: true, error: null } });
+
+    startTransition(async () => {
+      const res = await createPatient({
+        name: form.name.trim(),
+        calendar_aliases: [form.name.trim()],
+        icount_id: form.icountId.trim(),
+        default_rate: null,
+        phone: '',
+        email: '',
+        active: true,
+      });
+
+      if (res.ok && res.patient) {
+        const newP = { id: res.patient.id, name: res.patient.name ?? form.name.trim() };
+        setExtraPatients((prev) => [...prev, newP]);
+        setRow(eventId, {
+          newPatientForm: null,
+          selectedPatientId: newP.id,
+          saveState: 'idle',
+          message: null,
+        });
+      } else {
+        setRow(eventId, {
+          newPatientForm: { ...form, saving: false, error: (res as {ok:false;error:string}).error ?? 'שגיאה' },
+        });
+      }
+    });
   }
 
   function handleIgnore(eventId: string) {
@@ -222,7 +279,7 @@ export default function MatchingView({ rows, patients }: Props) {
                 {/* סטטוס התאמה + שמירה */}
                 <td>
                   <div className="status-cell">
-                    {!autoMatched && (
+                    {(!autoMatched || rs?.overriding) && (
                       <>
                         <select
                           className="patient-select"
@@ -232,7 +289,7 @@ export default function MatchingView({ rows, patients }: Props) {
                           }
                         >
                           <option value="">בחר מטופל…</option>
-                          {patients.map((p) => (
+                          {allPatients.map((p) => (
                             <option key={p.id} value={String(p.id)}>
                               {p.name}
                             </option>
@@ -245,7 +302,72 @@ export default function MatchingView({ rows, patients }: Props) {
                         >
                           התעלם
                         </button>
+                        {!rs?.newPatientForm && (
+                          <button
+                            type="button"
+                            className="new-patient-btn"
+                            onClick={() => openNewPatientForm(row.eventId, row.summary)}
+                          >
+                            + מטופל חדש
+                          </button>
+                        )}
                       </>
+                    )}
+
+                    {rs?.newPatientForm && (
+                      <div className="new-patient-form">
+                        <input
+                          type="text"
+                          className="patient-select"
+                          placeholder="שם מטופל"
+                          value={rs.newPatientForm.name}
+                          onChange={(e) =>
+                            setRow(row.eventId, {
+                              newPatientForm: { ...rs.newPatientForm!, name: e.target.value },
+                            })
+                          }
+                        />
+                        <input
+                          type="text"
+                          className="patient-select icount-input"
+                          placeholder="מזהה iCount (אופציונלי)"
+                          value={rs.newPatientForm.icountId}
+                          onChange={(e) =>
+                            setRow(row.eventId, {
+                              newPatientForm: { ...rs.newPatientForm!, icountId: e.target.value },
+                            })
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="save-btn"
+                          onClick={() => handleCreatePatient(row.eventId)}
+                          disabled={rs.newPatientForm.saving}
+                        >
+                          {rs.newPatientForm.saving ? 'יוצר…' : 'צור מטופל'}
+                        </button>
+                        <button
+                          type="button"
+                          className="ignore-btn"
+                          onClick={() => setRow(row.eventId, { newPatientForm: null })}
+                        >
+                          ביטול
+                        </button>
+                        {rs.newPatientForm.error && (
+                          <span className="msg-error">{rs.newPatientForm.error}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {autoMatched && !rs?.overriding && (
+                      <button
+                        type="button"
+                        className="ignore-btn"
+                        title="שינוי מטופל"
+                        onClick={() => setRow(row.eventId, { overriding: true })}
+                      >
+                        שנה
+                      </button>
                     )}
 
                     {isMatched && (
