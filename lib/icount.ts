@@ -184,13 +184,21 @@ export type InvoiceParams = {
 };
 
 // גוף הבקשה ל-doc/create — מוגדר במקום אחד כדי שהתצוגה-מקדימה תהיה זהה למה שנשלח.
+// iCount מצפה לשורות תחת items (unitprice/quantity), לא ל-sum/description שטוחים.
 export function buildInvoiceBody(params: InvoiceParams) {
   return {
     cid: ICOUNT_CID,
     doctype: 'invrec', // חשבונית מס קבלה
     client_id: params.clientId,
-    sum: params.sum,
-    description: params.description,
+    doc_lang: 'he',
+    currency_code: 'ILS',
+    items: [
+      {
+        description: params.description,
+        unitprice: params.sum,
+        quantity: 1,
+      },
+    ],
   };
 }
 
